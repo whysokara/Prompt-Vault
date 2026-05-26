@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Prompt Vault</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body data-theme="light">
+  <div class="container">
+    <header class="header">
+      <div class="header-left">
+        <span class="title">Prompt Vault</span>
+        <span class="count-badge" id="countBadge">0</span>
+      </div>
+      <button class="theme-toggle" id="themeToggle" title="Toggle theme">◐</button>
+    </header>
+
+    <div class="filters">
+      <input type="text" class="search-input" id="searchInput" placeholder="Search">
+    </div>
+
+    <div class="chip-row" id="chipRow"></div>
+
+    <div class="prompts-list" id="promptsList">
+      <div class="empty-state">No prompts yet.<br>Select text on any page, right-click, save.</div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

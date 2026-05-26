@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <rect width="128" height="128" rx="28" fill="#0A0A0A"/>
+
+  <!-- Left bracket -->
+  <path d="M 44 38 L 36 38 L 36 90 L 44 90"
+        stroke="#FAFAFA" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- Right bracket -->
+  <path d="M 84 38 L 92 38 L 92 90 L 84 90"
+        stroke="#FAFAFA" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- Middle dots (prompt cursor feel) -->
+  <circle cx="54" cy="64" r="3.5" fill="#FAFAFA"/>
+  <circle cx="64" cy="64" r="3.5" fill="#FAFAFA"/>
+  <circle cx="74" cy="64" r="3.5" fill="#FAFAFA"/>
+
+  <!-- Accent dot -->
+  <circle cx="100" cy="28" r="6" fill="#10B981"/>
+</svg>
