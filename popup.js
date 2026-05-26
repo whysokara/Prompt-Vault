@@ -104,7 +104,7 @@ function renderChipRow() {
   }
 }
 
-/* ─── Filtering ─── */
+/* ─── Filtering & Sorting ─── */
 function applyFilters() {
   filteredPrompts = allPrompts.filter(p => {
     const matchSearch =
@@ -121,6 +121,14 @@ function applyFilters() {
       (p.tags && p.tags.includes(currentFilters.tag));
 
     return matchSearch && matchPlatform && matchTag;
+  });
+
+  // Sort: starred first → copyCount desc → newest first
+  filteredPrompts.sort((a, b) => {
+    if (!!a.starred !== !!b.starred) return a.starred ? -1 : 1;
+    const countDiff = (b.copyCount || 0) - (a.copyCount || 0);
+    if (countDiff !== 0) return countDiff;
+    return new Date(b.savedAt) - new Date(a.savedAt);
   });
 }
 
@@ -167,7 +175,10 @@ function renderCardPreview(prompt) {
     `;
   }
 
+  const starTitle = prompt.starred ? "Remove from favourites" : "Add to favourites";
+
   return `
+    <button class="star-btn${prompt.starred ? " starred" : ""}" data-star="${prompt.id}" title="${starTitle}">★</button>
     <div class="card-actions">
       <button class="icon-btn" data-copy="${prompt.id}" title="Copy">⧉</button>
       <button class="icon-btn" data-edit="${prompt.id}" title="Edit">✎</button>
@@ -237,14 +248,20 @@ function attachCardListeners(prompt) {
   const card = document.querySelector(`.prompt-card[data-id="${prompt.id}"]`);
   if (!card) return;
 
+  const starBtn = card.querySelector(`[data-star="${prompt.id}"]`);
   const copyBtn = card.querySelector(`[data-copy="${prompt.id}"]`);
   const editBtn = card.querySelector(`[data-edit="${prompt.id}"]`);
   const deleteBtn = card.querySelector(`[data-delete="${prompt.id}"]`);
   const undoBtn = card.querySelector(`[data-undo="${prompt.id}"]`);
 
+  if (starBtn) starBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleStar(prompt.id);
+  });
+
   if (copyBtn) copyBtn.addEventListener("click", (e) => {
     e.stopPropagation();
-    copyToClipboard(prompt.text, copyBtn);
+    copyToClipboard(prompt.text, copyBtn, prompt.id);
   });
   if (editBtn) editBtn.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -357,12 +374,31 @@ async function deletePrompt(id) {
   }, 3000);
 }
 
-function copyToClipboard(text, btn) {
-  navigator.clipboard.writeText(text).then(() => {
+async function toggleStar(id) {
+  const idx = allPrompts.findIndex(p => p.id === id);
+  if (idx !== -1) {
+    allPrompts[idx].starred = !allPrompts[idx].starred;
+    await chrome.storage.local.set({ prompts: allPrompts });
+    applyFilters();
+    renderPrompts();
+  }
+}
+
+function copyToClipboard(text, btn, promptId) {
+  navigator.clipboard.writeText(text).then(async () => {
     if (btn) {
       const original = btn.textContent;
       btn.textContent = "✓";
       setTimeout(() => { btn.textContent = original; }, 1000);
+    }
+    if (promptId) {
+      const idx = allPrompts.findIndex(p => p.id === promptId);
+      if (idx !== -1) {
+        allPrompts[idx].copyCount = (allPrompts[idx].copyCount || 0) + 1;
+        await chrome.storage.local.set({ prompts: allPrompts });
+        applyFilters();
+        renderPrompts();
+      }
     }
   });
 }
