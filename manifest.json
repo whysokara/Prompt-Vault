@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Prompt Vault",
   "version": "1.0.0",
-  "description": "Save prompts you find on the web. Right-click any selected text and send it to Prompt Vault.",
+  "description": "Save prompts you find anywhere on the web. Right-click any selected text to store it with tags and AI platform labels — then search, filter, and copy when you need them.",
   "permissions": [
     "contextMenus",
     "storage",
@@ -25,6 +25,15 @@
   "action": {
     "default_popup": "popup.html",
     "default_title": "Open Prompt Vault",
-    "default_icon": "icons/icon.svg"
+    "default_icon": {
+      "16":  "icons/icon16.png",
+      "48":  "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16":  "icons/icon16.png",
+    "48":  "icons/icon48.png",
+    "128": "icons/icon128.png"
   }
 }

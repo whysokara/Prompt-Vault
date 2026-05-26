@@ -14,30 +14,32 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 function showSaveCard(data) {
   document.getElementById("prompt-vault-card")?.remove();
 
-  // Detect dark mode for the card
+  // Detect dark mode — use Claude's exact design tokens
   const isDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
   const c = isDark ? {
-    bg: "#0A0A0A",
-    bgSubtle: "#141414",
-    bgHover: "#1F1F1F",
-    border: "rgba(255,255,255,0.10)",
-    borderStrong: "rgba(255,255,255,0.18)",
-    fg: "#FAFAFA",
-    fgMuted: "#A1A1A1",
-    fgSubtle: "#6B6B6B",
-    accent: "#10B981",
-    shadow: "0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04)"
+    bg:          "#1a1714",
+    bgSubtle:    "#1f1e1b",
+    bgHover:     "#2d2b27",
+    border:      "rgba(250,249,245,0.09)",
+    borderFocus: "rgba(204,120,92,0.6)",
+    fg:          "#faf9f5",
+    fgMuted:     "#9c9a92",
+    fgSubtle:    "#73726c",
+    accent:      "#cc785c",
+    accentMuted: "rgba(204,120,92,0.15)",
+    shadow:      "0 8px 24px rgba(0,0,0,0.45), 0 0 0 1px rgba(250,249,245,0.06)"
   } : {
-    bg: "#FFFFFF",
-    bgSubtle: "#FAFAFA",
-    bgHover: "#F4F4F5",
-    border: "rgba(0,0,0,0.08)",
-    borderStrong: "rgba(0,0,0,0.14)",
-    fg: "#0A0A0A",
-    fgMuted: "#6B6B6B",
-    fgSubtle: "#A1A1A1",
-    accent: "#10B981",
-    shadow: "0 8px 32px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04)"
+    bg:          "#faf9f5",
+    bgSubtle:    "#f5f0e8",
+    bgHover:     "#e8e0d2",
+    border:      "#e6dfd8",
+    borderFocus: "rgba(204,120,92,0.5)",
+    fg:          "#141413",
+    fgMuted:     "#6c6a64",
+    fgSubtle:    "#8e8b82",
+    accent:      "#cc785c",
+    accentMuted: "rgba(204,120,92,0.10)",
+    shadow:      "0 8px 24px rgba(20,20,19,0.12), 0 0 0 1px rgba(20,20,19,0.06)"
   };
 
   injectStyles(c);
@@ -184,9 +186,7 @@ function showSaveCard(data) {
 }
 
 function injectStyles(c) {
-  if (document.getElementById("pv-styles")) {
-    document.getElementById("pv-styles").remove();
-  }
+  document.getElementById("pv-styles")?.remove();
   const style = document.createElement("style");
   style.id = "pv-styles";
   style.textContent = `
@@ -196,201 +196,141 @@ function injectStyles(c) {
       right: 20px;
       width: 320px;
       z-index: 2147483647;
-      font-family: -apple-system, BlinkMacSystemFont, "Inter", "SF Pro Text", "Segoe UI", sans-serif;
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      font-size: 13px;
+      line-height: 1.5;
       opacity: 0;
       transform: translateY(8px);
       transition: opacity 0.18s ease, transform 0.18s ease;
     }
-    #prompt-vault-card.pv-in {
-      opacity: 1;
-      transform: translateY(0);
-    }
-    #prompt-vault-card.pv-leaving {
-      opacity: 0;
-      transform: translateY(8px);
-    }
+    #prompt-vault-card.pv-in  { opacity: 1; transform: translateY(0); }
+    #prompt-vault-card.pv-leaving { opacity: 0; transform: translateY(8px); }
+
     #prompt-vault-card .pv-card {
       background: ${c.bg};
-      border-radius: 14px;
-      padding: 14px;
+      border: 1px solid ${c.border};
+      border-radius: 12px;
+      padding: 16px;
       box-shadow: ${c.shadow};
       color: ${c.fg};
-      font-size: 13px;
-      line-height: 1.5;
     }
     #prompt-vault-card .pv-head {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
     }
     #prompt-vault-card .pv-title {
       font-size: 13px;
       font-weight: 600;
       color: ${c.fg};
+      letter-spacing: -0.1px;
     }
     #prompt-vault-card .pv-x {
-      width: 22px;
-      height: 22px;
-      border-radius: 6px;
-      border: none;
-      background: transparent;
-      cursor: pointer;
-      color: ${c.fgMuted};
-      font-size: 16px;
-      line-height: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: background 0.15s ease, color 0.15s ease;
+      width: 22px; height: 22px;
+      border-radius: 6px; border: none;
+      background: transparent; cursor: pointer;
+      color: ${c.fgMuted}; font-size: 16px; line-height: 1;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, color 0.15s;
     }
-    #prompt-vault-card .pv-x:hover {
-      background: ${c.bgHover};
-      color: ${c.fg};
-    }
+    #prompt-vault-card .pv-x:hover { background: ${c.bgHover}; color: ${c.fg}; }
+
     #prompt-vault-card .pv-preview {
       font-size: 12px;
       color: ${c.fgMuted};
       background: ${c.bgSubtle};
       border: 1px solid ${c.border};
-      border-radius: 10px;
-      padding: 10px;
-      margin-bottom: 12px;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 14px;
       display: -webkit-box;
       -webkit-line-clamp: 3;
       -webkit-box-orient: vertical;
       overflow: hidden;
       word-break: break-word;
+      line-height: 1.55;
     }
-    #prompt-vault-card .pv-group {
-      margin-bottom: 12px;
-    }
+    #prompt-vault-card .pv-group { margin-bottom: 12px; }
     #prompt-vault-card .pv-label {
-      font-size: 10px;
-      font-weight: 600;
-      color: ${c.fgSubtle};
-      margin-bottom: 6px;
-      text-transform: uppercase;
-      letter-spacing: 0.6px;
+      font-size: 10px; font-weight: 600;
+      color: ${c.fgSubtle}; margin-bottom: 6px;
+      text-transform: uppercase; letter-spacing: 0.6px; display: block;
     }
     #prompt-vault-card .pv-pills {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
-      margin-bottom: 6px;
+      display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 6px;
     }
     #prompt-vault-card .pv-pill {
       padding: 4px 10px;
       border: 1px solid ${c.border};
-      border-radius: 999px;
-      font-size: 11px;
+      border-radius: 9999px;
+      font-size: 11px; font-weight: 500;
       color: ${c.fgMuted};
       background: transparent;
       cursor: pointer;
-      font-weight: 500;
-      transition: all 0.15s ease;
-      font-family: inherit;
+      transition: all 0.15s; font-family: inherit;
     }
     #prompt-vault-card .pv-pill:hover {
-      border-color: ${c.borderStrong};
-      color: ${c.fg};
+      border-color: ${c.accent};
+      color: ${c.accent};
+      background: ${c.accentMuted};
     }
     #prompt-vault-card .pv-pill.selected {
-      background: ${c.fg};
-      color: ${c.bg};
-      border-color: ${c.fg};
+      background: ${c.accent}; color: #fff; border-color: ${c.accent};
     }
     #prompt-vault-card .pv-input {
-      width: 100%;
-      padding: 7px 10px;
-      border: 1px solid ${c.border};
-      border-radius: 10px;
-      font-size: 12px;
-      background: ${c.bg};
-      color: ${c.fg};
-      outline: none;
-      font-family: inherit;
-      transition: border-color 0.15s ease;
+      width: 100%; padding: 7px 10px;
+      border: 1px solid ${c.border}; border-radius: 8px;
+      font-size: 12px; background: ${c.bg}; color: ${c.fg};
+      outline: none; font-family: inherit;
+      transition: border-color 0.15s, box-shadow 0.15s;
     }
     #prompt-vault-card .pv-input:focus {
-      border-color: ${c.borderStrong};
+      border-color: ${c.accent};
+      box-shadow: 0 0 0 3px ${c.accentMuted};
     }
     #prompt-vault-card .pv-custom-tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
-      margin-top: 6px;
+      display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px;
     }
     #prompt-vault-card .pv-custom-tag {
-      background: ${c.fg};
-      color: ${c.bg};
-      padding: 4px 8px;
-      border-radius: 999px;
-      font-size: 11px;
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      font-weight: 500;
+      background: ${c.accent}; color: #fff;
+      padding: 4px 8px; border-radius: 9999px;
+      font-size: 11px; font-weight: 500;
+      display: inline-flex; align-items: center; gap: 4px;
     }
     #prompt-vault-card .pv-rm {
-      background: none;
-      border: none;
-      color: inherit;
-      cursor: pointer;
-      padding: 0;
-      font-size: 13px;
-      line-height: 1;
-      opacity: 0.6;
+      background: none; border: none; color: inherit;
+      cursor: pointer; padding: 0; font-size: 13px; line-height: 1; opacity: 0.7;
     }
-    #prompt-vault-card .pv-rm:hover {
-      opacity: 1;
-    }
+    #prompt-vault-card .pv-rm:hover { opacity: 1; }
+
     #prompt-vault-card .pv-actions {
-      display: flex;
-      gap: 6px;
-      justify-content: flex-end;
-      margin-top: 4px;
+      display: flex; gap: 6px; justify-content: flex-end; margin-top: 6px;
     }
     #prompt-vault-card .pv-btn-ghost,
     #prompt-vault-card .pv-btn-primary {
-      padding: 7px 14px;
-      border-radius: 8px;
-      font-size: 12px;
-      font-weight: 500;
-      cursor: pointer;
-      border: none;
-      font-family: inherit;
-      transition: all 0.15s ease;
+      padding: 7px 14px; border-radius: 6px;
+      font-size: 13px; font-weight: 500;
+      cursor: pointer; border: none; font-family: inherit;
+      transition: all 0.15s;
     }
     #prompt-vault-card .pv-btn-ghost {
-      color: ${c.fgMuted};
-      background: transparent;
+      color: ${c.fgMuted}; background: transparent;
     }
     #prompt-vault-card .pv-btn-ghost:hover {
-      background: ${c.bgHover};
-      color: ${c.fg};
+      background: ${c.bgHover}; color: ${c.fg};
     }
     #prompt-vault-card .pv-btn-primary {
-      background: ${c.fg};
-      color: ${c.bg};
+      background: ${c.accent}; color: #fff;
     }
-    #prompt-vault-card .pv-btn-primary:hover {
-      opacity: 0.9;
-    }
+    #prompt-vault-card .pv-btn-primary:hover { opacity: 0.88; }
+
     #prompt-vault-card .pv-saved {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: ${c.fg};
-      font-size: 13px;
-      font-weight: 500;
-      padding: 4px 0;
+      display: flex; align-items: center; gap: 8px;
+      color: ${c.fg}; font-size: 13px; font-weight: 500; padding: 4px 0;
     }
     #prompt-vault-card .pv-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: ${c.accent};
+      width: 6px; height: 6px; border-radius: 50%; background: ${c.accent};
     }
   `;
   document.head.appendChild(style);
@@ -398,8 +338,8 @@ function injectStyles(c) {
 
 function showToast(message) {
   const isDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-  const bg = isDark ? "#FAFAFA" : "#0A0A0A";
-  const fg = isDark ? "#0A0A0A" : "#FAFAFA";
+  const bg = isDark ? "#faf9f5" : "#141413";
+  const fg = isDark ? "#141413" : "#faf9f5";
 
   const toast = document.createElement("div");
   toast.textContent = message;
