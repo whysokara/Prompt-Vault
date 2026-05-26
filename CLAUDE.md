@@ -4,209 +4,169 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Prompt Vault** is a Chrome extension (Manifest V3) that lets users save, organize, and manage prompts they find on the web. The extension uses `chrome.storage.local` for persistence — no backend required.
+**Prompt Vault** is a Chrome extension (Manifest V3) that lets users save, organize, and manage prompts found on the web. No backend — all data lives in `chrome.storage.local`.
 
 ## Getting Started
 
-### Loading the Extension (Development)
 ```bash
-# 1. Open chrome://extensions/
-# 2. Toggle "Developer Mode" (top-right corner)
-# 3. Click "Load unpacked"
-# 4. Select /Users/kara/Desktop/PromptVault/
+# Load unpacked in Chrome
+# 1. chrome://extensions/ → enable Developer Mode
+# 2. Load unpacked → select /Users/kara/Desktop/PromptVault/
+# 3. After any code change: click the refresh icon on the extension card
 ```
 
 ### Testing Workflow
-1. **Save**: Select text anywhere → right-click → "Send to Prompt Vault" → green toast confirms
-2. **View**: Click extension icon → popup shows all prompts, newest first
-3. **Edit**: Click Edit on any card → modify text/tags/platform → Save
-4. **Search**: Use search box or platform/tag filters to narrow down
-5. **Delete**: Click Delete → Undo appears for 3 seconds, or auto-delete after timeout
-
-To reload after code changes: Open `chrome://extensions/` and click the refresh icon on Prompt Vault.
+1. **Save**: Select text → right-click → "Send to Prompt Vault" → slim card appears bottom-right of the page
+2. **Tag + platform**: Add in the save card before clicking Save
+3. **View**: Click toolbar icon → 360×480 popup, newest prompts first
+4. **Edit**: Hover a card → click ✎ → card expands inline
+5. **Delete**: Hover → × → Undo appears for 3 seconds
+6. **Filter**: Search input + platform/tag chips in the chip row
 
 ## Architecture
 
 ### Data Model
 
-All data stored in `chrome.storage.local`:
-
 ```js
-// Prompts array
+// chrome.storage.local keys
 {
   prompts: [
     {
-      id: "uuid",                    // crypto.randomUUID()
-      text: "full prompt text",       // selected text from webpage
-      source: "https://x.com/...",   // tab.url
-      title: "Page Title",            // tab.title
-      savedAt: "2026-05-26T...",     // ISO timestamp
-      tags: ["coding", "custom"],     // array of tag strings (preset or custom)
-      platform: "ChatGPT"             // one of: ChatGPT, Claude, Gemini, Midjourney, Grok, or null
+      id: "uuid",               // crypto.randomUUID()
+      text: "full prompt text", // selected text
+      source: "https://...",    // tab.url
+      title: "Page Title",      // tab.title
+      savedAt: "2026-05-26T…",  // ISO timestamp
+      tags: ["coding", "custom"],
+      platform: "ChatGPT"       // ChatGPT | Claude | Gemini | Midjourney | Grok | null
     }
   ],
-  theme: "light" | "dark"             // user preference
+  theme: "light" | "dark"
 }
 ```
 
 ### Core Flows
 
 **Saving a Prompt:**
-1. User selects text and right-clicks
-2. `background.js` catches the context menu click
-3. Builds prompt object from `info.selectionText`, `tab.url`, `tab.title`
-4. Prepends to prompts array in `chrome.storage.local`
-5. Sends message to `content.js` to show toast notification
+1. User selects text, right-clicks → "Send to Prompt Vault"
+2. `background.js` sends `show-save-modal` message to `content.js` with `{ text, source, title }`
+3. `content.js` injects a slim save card (bottom-right, no backdrop) with tag/platform pickers
+4. User fills in optional tags + platform, clicks Save
+5. `content.js` sends `save-prompt` message back to `background.js`
+6. `background.js` builds the prompt object, prepends to storage array
+7. `content.js` receives `show-toast` message and shows a brief dark toast
 
 **Editing a Prompt:**
-1. User clicks Edit on a card
-2. `popup.js` sets `editingId = promptId` and re-renders
-3. Card expands inline to show edit form (text, tags, platform)
-4. User modifies and clicks Save
-5. Updated prompt replaces old one in `allPrompts` array
-6. Storage updated, filters re-applied, UI re-rendered
+1. User hovers card → action buttons appear → clicks ✎
+2. `popup.js` sets `editingId` and re-renders that card as an inline edit form
+3. Edit form: textarea + preset/custom tag pills + platform pills
+4. Save: reads form state, updates `allPrompts[idx]`, writes to storage, re-renders
 
-**Deleting a Prompt:**
-1. User clicks Delete
-2. `popup.js` sets `pendingDelete = promptId` and renders with faded appearance + Undo button
-3. A 3-second timer starts
-4. If Undo clicked: timer cleared, `pendingDelete` reset, normal render
-5. If timer expires: prompt filtered out of `allPrompts`, storage updated
+**Deleting:**
+1. Hover card → ×
+2. `pendingDelete = id`, card shows "Deleted / Undo"
+3. 3-second timer → remove from `allPrompts`, write storage
+4. Undo clears the timer
 
 **Filtering:**
-- Text search: filters by `prompt.text` and `prompt.title` (case-insensitive)
-- Platform filter: shows only prompts with matching `platform`
-- Tag filter: shows only prompts where `tags` array includes selected tag
-- Filters apply independently (all must match)
+- All filters applied in-memory via `applyFilters()` on `allPrompts`
+- `currentFilters = { search, platform, tag }` — all three must match
 
 ### File-by-File Guide
 
-| File | Purpose | Key Details |
-|------|---------|-------------|
-| `manifest.json` | MV3 config | Defines permissions, service worker, content scripts, popup |
-| `background.js` | Service worker | Context menu registration, save logic, messaging to content script |
-| `content.js` | Content script (runs on all sites) | Listens for save message, injects toast notification with CSS animations |
-| `popup.html` | Popup UI template | Header, search/filters, prompts list container |
-| `popup.js` | Popup logic (1000+ lines) | State management, rendering, edit/delete/search, theme toggle |
-| `popup.css` | Popup styling | Light/dark theme via CSS custom properties, card layout, animations |
-| `icons/icon.svg` | Extension icon | Referenced in manifest |
+| File | Purpose |
+|------|---------|
+| `manifest.json` | MV3 config — permissions, service worker, content scripts, popup |
+| `background.js` | Context menu, save orchestration, message relay |
+| `content.js` | Injects the save card + toast; all DOM scoped under `#prompt-vault-card` |
+| `popup.html` | Minimal template — header, search input, chip row, list container |
+| `popup.js` | All popup state and rendering — `allPrompts`, `filteredPrompts`, `editingId`, `pendingDelete` |
+| `popup.css` | CSS custom property tokens, card/chip/pill layout |
+| `icons/icon.svg` | Black rounded square with `[ ··· ]` glyph + green accent dot |
 
-## Key Implementation Details
+## Design System
 
-### Preset vs. Custom Tags
-- **Preset tags**: Hard-coded in `PRESET_TAGS` array (`["coding", "writing", "image", "research", "productivity"]`)
-- **Custom tags**: User types them in edit form, added to `tags` array
-- Edit form shows both: preset tag buttons + custom tag input field
-- Both types stored identically in prompt object
+**Reference:** Vercel/v0 — monochrome, minimal, no gradients.
 
-### Theme System
-- CSS custom properties (`--bg-primary`, `--text-primary`, etc.) defined in `:root` and `[data-theme="dark"]`
-- `<body data-theme="light">` toggles themes via attribute
-- Theme persisted in `chrome.storage.local` and loaded on popup open
+**Tokens (popup.css):**
+```css
+/* Light */
+--bg / --bg-subtle / --bg-hover
+--fg / --fg-muted / --fg-subtle
+--border / --border-strong
+--accent: #10B981   /* used only as a 5-6px dot, nowhere else */
+--danger: #E5484D
 
-### Edit Mode
-- No separate edit page — edit form renders inline in the same card
-- When `editingId === prompt.id`, card shows edit form instead of preview
-- Editable fields: prompt text (textarea), tags (preset + custom), platform (buttons)
-- Both Cancel and Save re-render the list (Cancel without saving changes)
+/* Dark — same names, inverted values */
+```
 
-### Toast Notifications
-- Injected by `content.js` only when user saves (on-demand, not persistent)
-- Uses CSS animations (`@keyframes slideIn/slideOut`) for smooth appearance/fade
-- Top-right corner, auto-removes after 2 seconds
-- Green background, white text
-
-### Performance Considerations
-- `allPrompts` loaded once on popup open, not re-fetched per action
-- `chrome.storage.local.set()` is async but not awaited in background.js (fire-and-forget for save)
-- Search/filter happens in-memory on `allPrompts` (not queried against storage)
-- Re-rendering full list on every change (acceptable since typical vault is <100 prompts)
+**Rules:**
+- No gradients, no colored backgrounds (accent dot is the only color)
+- Corners: cards 14px, buttons/inputs 10px, chips/pills full pill (999px)
+- Borders: 1px solid at very low opacity (`rgba(0,0,0,0.08)`)
+- Card actions (copy/edit/delete) are **hover-only** — hidden at rest
+- Save card in `content.js` uses inline CSS so it's self-contained and immune to page styles; it auto-detects `prefers-color-scheme`
 
 ## Common Development Tasks
 
-### Adding a New AI Platform
-1. Add to `PLATFORMS` array in `popup.js`
-2. Platform picker buttons are generated from this array in the edit form
-3. No other changes needed (platform is just a string field)
+### Adding a New Platform
+Add to `PLATFORMS` in both `popup.js` and `content.js` — that's it. Both chip rows generate from that array.
 
-### Changing Preset Tags
-1. Edit `PRESET_TAGS` array in `popup.js`
-2. Tag filter and edit form will automatically reflect the change
-3. Existing custom tags in saved prompts are unaffected
+### Adding a New Preset Tag
+Edit `PRESET_TAGS` in both `popup.js` and `content.js`.
 
-### Modifying the Toast Notification
-- Edit the `showToast()` function in `content.js`
-- CSS animations are in `<style>` injected in the same function
-- To change duration, modify the `setTimeout` call (currently 2000ms)
+### Changing the Popup Size
+Set `width` on `html, body` in `popup.css` and update `height` on `.container`.
 
-### Adding a New Filter Type
-1. Add to `currentFilters` object in `popup.js`
-2. Add filter UI element (input, select, etc.) to `popup.html`
-3. Add event listener in `setupEventListeners()`
-4. Add filter logic to `applyFilters()` function
-5. Call `renderPrompts()` after filter changes
+### Modifying the Save Card
+Edit `showSaveCard()` and `injectStyles()` in `content.js`. All card CSS lives in `injectStyles()` as a template string — no external stylesheet so page styles can't bleed in.
 
-### Styling Changes
-- All colors and spacing use CSS custom properties (no hard-coded hex/px values)
-- Light/dark theme colors defined in `:root` and `[data-theme="dark"]`
-- To change theme colors, update the CSS custom properties at the top of `popup.css`
+### Adding a New Filter
+1. Add key to `currentFilters` in `popup.js`
+2. Add a chip or input to `popup.html`
+3. Wire it in `setupEventListeners()`
+4. Add the condition to `applyFilters()`
 
-## Debugging Tips
+## Debugging
 
-**Extension not showing in Chrome?**
-- Ensure manifest.json is valid JSON: `python3 -m json.tool manifest.json`
-- Check `chrome://extensions/` error messages (reload the page if you don't see errors)
+**Save card not appearing:**
+- Reload the extension, then reload the page (content scripts need a fresh page load)
+- Check `chrome://extensions/` for service worker errors
+- Some sites with strict CSP block injected DOM — toast/card won't appear but the save still works if background.js receives the message
 
-**Changes not appearing after editing?**
-- Reload the extension: go to `chrome://extensions/` and click the refresh icon on Prompt Vault
-- Open DevTools on the popup: Right-click the extension icon → Inspect popup
-- Check for JavaScript errors in the console
+**Popup shows stale data:**
+- `allPrompts` is loaded once on popup open (`DOMContentLoaded`). Re-open the popup to reload.
 
-**Toast not showing?**
-- Some websites with strict Content Security Policy (CSP) may block injected DOM
-- Check the website's CSP headers
-- Content script should still save the prompt (toast is just UI feedback)
+**Validate manifest:**
+```bash
+python3 -m json.tool manifest.json
+```
 
-**Data not persisting?**
-- Check `chrome://extensions/` to ensure extension has storage permission
-- Open DevTools, go to Storage tab → Chrome Storage → Local → check for "prompts" and "theme" keys
-- Prompts are keyed as `prompts` (array) and `theme` (string)
+**Inspect popup DevTools:**
+Right-click the extension icon → Inspect popup
 
-**Editing form not showing?**
-- Check browser console for JavaScript errors
-- Verify that `editingId` is being set correctly
-- Check that `renderEditForm()` HTML is valid
+## Constraints
 
-## Important Constraints
+- **MV3**: No `eval`, no remote scripts, service worker (not background page)
+- **Content script isolation**: `#prompt-vault-card` and `#pv-styles` are the only persistent DOM nodes; both are removed on close
+- **Storage**: `chrome.storage.local` ~10MB limit — fine for thousands of prompts
+- **Browser support**: Chrome, Edge, Brave. Not Firefox (different WebExtension APIs)
 
-- **Manifest V3**: No eval, no external scripts, no background pages (only service workers)
-- **Content script injection**: Limited to on-demand toast (not persistent DOM)
-- **Storage quota**: `chrome.storage.local` has per-extension limits (~10MB), but vault should be fine for thousands of prompts
-- **Platform support**: Chrome extension API — works on Chrome, Edge, Brave, etc. Not compatible with Firefox (would need WebExtensions API)
+## Test Checklist
 
-## Testing the Extension
-
-### Manual Test Checklist
-- [ ] Right-click on selected text → "Send to Prompt Vault" appears
-- [ ] Toast notification shows after saving
-- [ ] Popup displays the saved prompt with correct text, URL, timestamp
-- [ ] Edit form appears when clicking Edit
-- [ ] Preset and custom tags work in edit form
-- [ ] Platform selector works
-- [ ] Save persists changes and re-renders
-- [ ] Delete → Undo works within 3 seconds
-- [ ] Delete → timeout works after 3 seconds
-- [ ] Search filters by text
-- [ ] Platform filter narrows results
-- [ ] Tag filter narrows results
-- [ ] Dark/Light theme toggle persists across popup close/open
-- [ ] Multiple prompts render in correct order (newest first)
-- [ ] Copy button copies full prompt text to clipboard
-
-### Known Limitations
-- No batch operations (select multiple, bulk delete, etc.)
-- No export/import
-- No cloud sync
-- No keyboard shortcuts
-- Tags are just strings (no autocomplete, no hierarchy)
-- No duplicate detection
+- [ ] Right-click selected text → save card slides in bottom-right
+- [ ] Page stays interactive behind the card (no backdrop dim)
+- [ ] Escape closes the card
+- [ ] Tags (preset + custom) and platform saved correctly
+- [ ] Popup shows prompt with correct text, source domain, relative time, platform dot, tags
+- [ ] Hover card → actions appear; un-hover → actions hide
+- [ ] Copy → icon briefly shows ✓
+- [ ] Edit inline → save → data persists after popup close/reopen
+- [ ] Delete → Undo within 3s → prompt restored
+- [ ] Delete → let expire → prompt gone
+- [ ] Search by text
+- [ ] Platform chip filter
+- [ ] Tag chip filter (only visible when tags exist)
+- [ ] Theme toggle persists
+- [ ] Dark theme: black surfaces, white text
+- [ ] Both themes: no beige, no gradients

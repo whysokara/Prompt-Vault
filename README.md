@@ -1,106 +1,91 @@
-# Prompt Vault — Chrome Extension
+# Prompt Vault
 
-A simple Chrome extension to save, organize, and manage prompts you find on the web.
+A Chrome extension to save, organize, and revisit prompts you find on the web.
 
-## Installation (Development)
+## Install (Development)
 
-1. Open Chrome and go to `chrome://extensions/`
-2. Enable **Developer Mode** (toggle in the top-right corner)
-3. Click **Load unpacked**
-4. Select the `PromptVault` folder
-5. The extension should now appear in your Chrome toolbar
+1. `chrome://extensions/` → enable **Developer Mode**
+2. **Load unpacked** → select the `PromptVault` folder
+3. Extension appears in your toolbar
 
-## Usage
+## How It Works
 
 ### Save a Prompt
-1. Select any text on a webpage (e.g., from X, Reddit, blogs, etc.)
-2. Right-click and select **"Send to Prompt Vault"**
-3. A green toast notification will confirm the save
-4. Open the Prompt Vault popup to view it
+1. Select any text on a page (tweet, comment, blog post, etc.)
+2. Right-click → **Send to Prompt Vault**
+3. A slim card slides in from the bottom-right — no overlay, page stays interactive
+4. Optionally add **tags** and pick which **AI platform** it works best on
+5. Click **Save** — done
 
-### View & Manage Prompts
-1. Click the Prompt Vault icon in your Chrome toolbar
-2. The popup shows all your saved prompts with:
-   - Prompt preview (first 120 characters)
-   - Source domain and time saved
-   - Platform badge (if set)
-   - Tags
-
-### Edit a Prompt
-1. Click **Edit** on any prompt card
-2. Edit the prompt text
-3. Add tags:
-   - Click preset tags (coding, writing, image, research, productivity)
-   - Or type custom tags and press Enter
-4. Select which AI platform works best (ChatGPT, Claude, Gemini, Midjourney, Grok)
-5. Click **Save**
-
-### Delete a Prompt
-1. Click **Delete** on any prompt
-2. You have 3 seconds to click **Undo** to recover it
-3. If you do nothing, it's permanently deleted
+### View Your Prompts
+Click the Prompt Vault icon to open the popup. Prompts are shown newest first with source, time, platform, and tags.
 
 ### Search & Filter
-- **Text search**: Type in the search box to find prompts by content or page title
-- **Platform filter**: Use the dropdown to show prompts for a specific AI platform
-- **Tag filter**: Click a tag chip to filter by that tag
+- Type in the search bar to find by content or page title
+- Click a **platform chip** (ChatGPT, Claude, Gemini, Midjourney, Grok) to filter
+- Click a **#tag chip** to filter by tag (chips appear once you have tags)
 
-### Toggle Theme
-- Click the sun/moon button (☀️/🌙) in the header to switch between light and dark mode
-- Your preference is saved and persists across sessions
+### Edit a Prompt
+Hover any card → click **✎** → edit text, tags, or platform inline → Save.
+
+### Delete a Prompt
+Hover → click **×** → Undo appears for 3 seconds. After that it's gone.
+
+### Theme
+Click **◐** in the header to toggle light/dark. Preference is saved.
 
 ## Features
 
-✅ Save prompts with one right-click  
-✅ Organize with tags and platform labels  
-✅ Search and filter by multiple criteria  
-✅ Light/Dark theme toggle  
-✅ Edit and delete prompts  
-✅ 3-second undo on delete  
-✅ All data stored locally (no cloud sync)  
+- Right-click save from any page
+- Add tags and platform at save time
+- Preset tags: coding, writing, image, research, productivity (+ custom)
+- Platforms: ChatGPT, Claude, Gemini, Midjourney, Grok
+- Inline edit, 3-second undo on delete
+- Search + platform + tag filters
+- Light/dark theme
+- Everything stored locally — nothing sent to any server
 
 ## File Structure
 
 ```
 PromptVault/
-├── manifest.json       # Extension config (MV3)
-├── background.js       # Service worker
-├── content.js          # Toast notifications
-├── popup.html          # UI
-├── popup.js            # Logic
-├── popup.css           # Styling
-├── icons/              # Extension icons
-└── README.md           # This file
+├── manifest.json     # MV3 config
+├── background.js     # Service worker — context menu + save logic
+├── content.js        # Save card + toast injected into pages
+├── popup.html        # Popup template
+├── popup.js          # Popup state and rendering
+├── popup.css         # Design tokens + layout
+├── icons/icon.svg    # Extension icon
+├── CLAUDE.md         # Developer guide
+└── README.md
 ```
 
 ## Storage
 
-All prompts and settings are stored locally in `chrome.storage.local`. Nothing is sent to any server.
+All data in `chrome.storage.local` — no server, no account needed.
 
-Prompt object structure:
 ```js
 {
   id: "uuid",
   text: "prompt text",
-  source: "https://...",
+  source: "https://x.com/...",
   title: "Page title",
   savedAt: "2026-05-26T10:00:00Z",
-  tags: ["coding", "gpt"],
-  platform: "ChatGPT"
+  tags: ["coding"],
+  platform: "Claude"  // or null
 }
 ```
 
 ## Troubleshooting
 
-**Toast notification not showing?**
-- Make sure content scripts are enabled for the site
-- Some sites with strict CSP might block the toast
+**Save card doesn't appear after right-click**
+Reload the extension at `chrome://extensions/`, then reload the page. Content scripts load on page load, not extension reload.
 
-**Search not finding prompts?**
-- Search is case-insensitive and matches both prompt text and page title
+**Changes to code not reflecting**
+Reload the extension (refresh icon on the extension card), then re-open the popup or reload the page for content script changes.
 
-**Undo button not appearing?**
-- The undo button appears automatically when you delete. Click it within 3 seconds.
+**Toast/card blocked on some sites**
+Sites with strict Content Security Policy (CSP) may block injected DOM. The prompt still saves — only the visual feedback is blocked.
 
 ## Future Ideas
 
@@ -110,4 +95,3 @@ Prompt object structure:
 - Duplicate detection
 - AI platform recommendations
 - Keyboard shortcuts
-# Prompt-Vault
